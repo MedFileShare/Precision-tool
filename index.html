@@ -432,33 +432,41 @@ function gamma(z) {
 }
 
 function calculate() {
-    const input = document.getElementById("dataInput").value.trim();
-    if (!input) { showToast("请输入测定数据！"); return; }
-    const data = input.split(/[,，\s\n]+/).map(item => parseFloat(item.trim())).filter(item => !isNaN(item));
-    if (data.length < 2) { showToast("至少需要2个数据才能计算！"); return; }
-    const confidenceLevel = parseFloat(document.getElementById("confidenceLevel").value);
-    let alpha = (100 - confidenceLevel) / 100;
-    alpha = Number(alpha.toFixed(10));
-    const n = data.length;
-    let sum = 0;
-    for (let i = 0; i < data.length; i++) sum = parseFloat((sum + data[i]).toFixed(15));
-    const mean = parseFloat((sum / n).toFixed(15));
-    let sumSq = 0;
-    for (let i = 0; i < data.length; i++) {
-        const diff = data[i] - mean;
-        sumSq = parseFloat((sumSq + diff * diff).toFixed(15));
+    try {
+        const input = document.getElementById("dataInput").value.trim();
+        if (!input) { showToast("请输入测定数据！"); return; }
+        const data = input.split(/[,，\s\n]+/).map(item => parseFloat(item.trim())).filter(item => !isNaN(item));
+        if (data.length < 2) { showToast("至少需要2个数据才能计算！"); return; }
+        const confidenceLevel = parseFloat(document.getElementById("confidenceLevel").value);
+        let alpha = (100 - confidenceLevel) / 100;
+        alpha = Number(alpha.toFixed(10));
+        const n = data.length;
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) sum = parseFloat((sum + data[i]).toFixed(15));
+        const mean = parseFloat((sum / n).toFixed(15));
+        if (mean === 0) { showToast("平均值为0，无法计算RSD！"); return; }
+        let sumSq = 0;
+        for (let i = 0; i < data.length; i++) {
+            const diff = data[i] - mean;
+            sumSq = parseFloat((sumSq + diff * diff).toFixed(15));
+        }
+        const variance = parseFloat((sumSq / (n - 1)).toFixed(15));
+        const sd = Math.sqrt(variance);
+        const rsd = parseFloat(((sd / mean) * 100).toFixed(10));
+        const df = n - 1;
+        const chiVal = chiSquareInv(alpha, df);
+        if (!isFinite(chiVal) || chiVal <= 0) { showToast("置信上限计算异常，请检查数据或置信水平"); return; }
+        const ciUpperRsd = rsd * Math.sqrt(df / chiVal);
+        if (!isFinite(ciUpperRsd)) { showToast("置信上限计算异常（无穷大）"); return; }
+        const limitInput = document.getElementById("limitInput").value.trim();
+        const limit = limitInput ? parseFloat(limitInput) : null;
+        currentResults = { data, n, mean, sd, rsd, ciUpperRsd, limit, confidenceLevel };
+        displayResults();
+        showToast("计算完成！");
+    } catch (e) {
+        console.error(e);
+        showToast("计算异常：" + (e && e.message ? e.message : "未知错误"));
     }
-    const variance = parseFloat((sumSq / (n - 1)).toFixed(15));
-    const sd = Math.sqrt(variance);
-    const rsd = parseFloat(((sd / mean) * 100).toFixed(10));
-    const df = n - 1;
-    const chiVal = chiSquareInv(alpha, df);
-    const ciUpperRsd = rsd * Math.sqrt(df / chiVal);
-    const limitInput = document.getElementById("limitInput").value.trim();
-    const limit = limitInput ? parseFloat(limitInput) : null;
-    currentResults = { data, n, mean, sd, rsd, ciUpperRsd, limit, confidenceLevel };
-    displayResults();
-    showToast("计算完成！");
 }
 
 function displayResults() {
@@ -508,19 +516,22 @@ function copyResults() {
     if (!currentResults) return;
     const r = currentResults;
     const isPass = r.limit !== null && r.ciUpperRsd <= r.limit;
-    const text = `精密度评估报告（${r.confidenceLevel}%置信上限）
-━━━━━━━━━━━━━━
-测定数据：${r.data.join(", ")}
-RSD 限度：${r.limit !== null ? r.limit.toFixed(2) + "%" : "-"}
-━━━━━━━━━━━━━━
-测定次数 n：${r.n}
-平均值 Mean：${r.mean.toFixed(4)}
-样本标准差 SD：${r.sd.toFixed(6)}
-RSD %：${r.rsd.toFixed(4)} %
-RSD ${r.confidenceLevel}%置信上限：${r.ciUpperRsd.toFixed(4)} %
-━━━━━━━━━━━━━━
-判定结果：${r.limit !== null ? (isPass ? "✅ 合格" : "❌ 不合格") : "未设定限度"}${r.limit !== null ? ("
-RSD " + r.confidenceLevel + "%置信上限 (" + r.ciUpperRsd.toFixed(4) + "%) " + (isPass ? "≤" : ">") + " 限度范围 (" + r.limit.toFixed(2) + "%)") : ""}`;
+    const text =
+        "精密度评估报告（" + r.confidenceLevel + "%置信上限）\n" +
+        "━━━━━━━━━━━━━━\n" +
+        "测定数据：" + r.data.join(", ") + "\n" +
+        "RSD 限度：" + (r.limit !== null ? r.limit.toFixed(2) + "%" : "-") + "\n" +
+        "━━━━━━━━━━━━━━\n" +
+        "测定次数 n：" + r.n + "\n" +
+        "平均值 Mean：" + r.mean.toFixed(4) + "\n" +
+        "样本标准差 SD：" + r.sd.toFixed(6) + "\n" +
+        "RSD %：" + r.rsd.toFixed(4) + " %\n" +
+        "RSD " + r.confidenceLevel + "%置信上限：" + r.ciUpperRsd.toFixed(4) + " %\n" +
+        "━━━━━━━━━━━━━━\n" +
+        "判定结果：" + (r.limit !== null ? (isPass ? "✅ 合格" : "❌ 不合格") : "未设定限度") +
+        (r.limit !== null
+            ? "\nRSD " + r.confidenceLevel + "%置信上限 (" + r.ciUpperRsd.toFixed(4) + "%) " + (isPass ? "≤" : ">") + " 限度范围 (" + r.limit.toFixed(2) + "%)"
+            : "");
     copyToClipboard(text);
 }
 
