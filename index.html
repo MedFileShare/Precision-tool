@@ -189,93 +189,146 @@ select:focus, input[type="text"]:focus { outline: none; border-color: #3498db; }
 </div>
 <div class="toast" id="toast"></div>
 <script>
-// ==================== 安全验证模块 ====================
-(function() {
-    // 1. 检测微信环境
-    const isWechat = /MicroMessenger/i.test(navigator.userAgent);
-    if (!isWechat) {
-        document.getElementById('blockScreen').classList.add('show');
-        document.getElementById('authOverlay').classList.add('hidden');
-        return;
+// ==================== 安全验证模块（防弹版） ====================
+// 设计目标：无论 DOM 是否就绪、storage 是否异常、浏览器内核新旧，密码按钮点击都必然生效
+// 策略：① 立即执行 + DOMContentLoaded 事件双通道启动  ② 启动后若找不到元素则 50ms×100 轮询兜底
+//       ③ 所有 DOM 访问都做空值防御  ④ 所有 try/catch，失败写入 authError 可见区
+(function () {
+    'use strict';
+
+    const CONFIG = {
+        CORRECT_PWD: String.fromCharCode(97,112,108,51,57,48,55), // apl3907
+        STORAGE_KEY: '_prec_tool_auth',
+        EXPIRE_MS: 12 * 3600 * 1000, // 12小时
+        UA_RE: /MicroMessenger/i,
+        POLL_INTERVAL: 50,
+        POLL_MAX: 100 // 50ms × 100 = 最多等 5 秒
+    };
+
+    var $ = function (id) { return document.getElementById(id); };
+    var authErrorEl = null;
+
+    // 把运行时错误写回页面（至少用户能看到为什么没反应，而不是静默）
+    function setErr(msg) {
+        try {
+            if (authErrorEl) { authErrorEl.textContent = msg; }
+            else {
+                var el = $('authError');
+                if (el) { authErrorEl = el; el.textContent = msg; }
+            }
+        } catch (e) { /* noop */ }
     }
 
-    // 2. 密码验证（简单混淆，可定期更换）
-    // 密码: （实际使用时请修改）
-    const CORRECT_PWD = String.fromCharCode(97,112,108,51,57,48,55); // ""
-    const STORAGE_KEY = '_acc_tool_auth';
-    const EXPIRE_HOURS = 12; // 验证有效期12小时
-
-    // 检查是否已验证
     function checkAuth() {
         try {
-            const record = localStorage.getItem(STORAGE_KEY);
-            if (!record) return false;
-            const data = JSON.parse(atob(record));
-            if (data.p !== btoa(CORRECT_PWD)) return false;
-            const now = Date.now();
-            if (now - data.t > EXPIRE_HOURS * 3600 * 1000) return false;
+            var rec = localStorage.getItem(CONFIG.STORAGE_KEY);
+            if (!rec) return false;
+            var d = JSON.parse(atob(rec));
+            if (d.p !== btoa(CONFIG.CORRECT_PWD)) return false;
+            if (Date.now() - d.t > CONFIG.EXPIRE_MS) return false;
             return true;
-        } catch(e) {
-            return false;
-        }
+        } catch (e) { return false; }
     }
 
-    // 保存验证状态
     function saveAuth() {
         try {
-            const data = { p: btoa(CORRECT_PWD), t: Date.now() };
-            localStorage.setItem(STORAGE_KEY, btoa(JSON.stringify(data)));
+            var data = { p: btoa(CONFIG.CORRECT_PWD), t: Date.now() };
+            localStorage.setItem(CONFIG.STORAGE_KEY, btoa(JSON.stringify(data)));
             return true;
-        } catch(e) {
-            return false; // localStorage 写入失败（禁用、隐私模式）也允许进入
-        }
+        } catch (e) { return false; }
     }
 
-    // 进入工具（先切换 UI，再持久化，保证任何异常下 UI 都有反馈）
+    // 先切 UI（绝对保证视觉反馈），最后才写 storage
     function enterApp() {
-        document.getElementById('authOverlay').classList.add('hidden');
-        document.getElementById('mainContainer').classList.add('show');
-        saveAuth(); // 持久化失败不影响本次进入
+        var ao = $('authOverlay');
+        var mc = $('mainContainer');
+        if (ao) { try { ao.classList.add('hidden'); } catch (e) {} }
+        if (mc) { try { mc.classList.add('show'); } catch (e) {} }
+        saveAuth();
     }
 
-    // 已验证则直接显示
-    if (checkAuth()) {
-        enterApp();
-        return;
+    function isWechatEnv() {
+        try { return CONFIG.UA_RE.test(navigator.userAgent); } catch (e) { return false; }
     }
 
-    // 验证按钮
-    document.getElementById('authBtn').addEventListener('click', function() {
-        const input = document.getElementById('authInput').value.trim();
-        const errorEl = document.getElementById('authError');
-        if (input === CORRECT_PWD) {
-            errorEl.textContent = '';
-            enterApp();
-        } else {
-            errorEl.textContent = '密码错误，请重新输入';
-            document.getElementById('authInput').value = '';
-            document.getElementById('authInput').focus();
+    // 一次性绑定：非微信拦截 + 已验证直通 + 密码按钮 + 回车
+    function attach() {
+        var bs = $('blockScreen');
+        var ao = $('authOverlay');
+        var input = $('authInput');
+        var btn = $('authBtn');
+        var mc = $('mainContainer');
+        authErrorEl = $('authError');
+
+        // 防御：只要有一个关键 DOM 没拿到，交给下一次轮询
+        if (!bs || !ao || !input || !btn || !mc) return false;
+
+        try {
+            if (!isWechatEnv()) {
+                bs.classList.add('show');
+                ao.classList.add('hidden');
+                return true; // 非微信：结束
+            }
+
+            // 已验证 → 直接进
+            if (checkAuth()) { enterApp(); return true; }
+
+            // 按钮点击
+            btn.addEventListener('click', function () {
+                try {
+                    var val = (input.value || '').trim();
+                    setErr('');
+                    if (val === CONFIG.CORRECT_PWD) { enterApp(); }
+                    else {
+                        setErr('密码错误，请重新输入');
+                        try { input.value = ''; input.focus(); } catch (e) {}
+                    }
+                } catch (e) { setErr('验证异常，请重试'); }
+            });
+
+            // 回车
+            input.addEventListener('keypress', function (e) {
+                try { if (e.key === 'Enter') btn.click(); } catch (e2) {}
+            });
+
+            // 简单反调试（静默失败）
+            try {
+                (function () {
+                    var threshold = 160;
+                    setInterval(function () {
+                        try {
+                            if (window.outerHeight - window.innerHeight > threshold ||
+                                window.outerWidth - window.innerWidth > threshold) { /* 干扰 */ }
+                        } catch (e3) {}
+                    }, 1000);
+                })();
+            } catch (e4) {}
+
+            return true; // 全部绑定完成
+        } catch (eOuter) {
+            setErr('系统异常：' + (eOuter && eOuter.message ? eOuter.message : 'unknown'));
+            return true; // 不继续轮询
         }
-    });
+    }
 
-    // 回车提交
-    document.getElementById('authInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') document.getElementById('authBtn').click();
-    });
+    // 双通道启动 + 轮询兜底
+    var pollTries = 0;
+    function start() {
+        try { if (attach()) return; } catch (e) {}
+        if (pollTries >= CONFIG.POLL_MAX) return;
+        pollTries++;
+        setTimeout(start, CONFIG.POLL_INTERVAL);
+    }
 
-    // 3. 简单反调试：检测开发者工具（可选，会误伤但增加难度）
-    try {
-        (function() {
-            const threshold = 160;
-            const check = function() {
-                if (window.outerHeight - window.innerHeight > threshold ||
-                    window.outerWidth - window.innerWidth > threshold) {
-                    // 可能打开了开发者工具，不做强制处理，仅增加干扰
-                }
-            };
-            setInterval(check, 1000);
-        })();
-    } catch(e) { /* 忽略反调试异常，确保主流程不受影响 */ }
+    // 通道1：如果 DOM 已经 ready（脚本在 body 末），立刻跑一次
+    if (document.readyState === 'interactive' || document.readyState === 'complete') {
+        start();
+    } else {
+        // 通道2：等 DOMContentLoaded（兼容任何脚本位置）
+        document.addEventListener('DOMContentLoaded', start, false);
+        // 通道3：再给一个 setTimeout 兜底（部分 X5 内核 DOMContentLoaded 触发时机古怪）
+        setTimeout(start, 300);
+    }
 })();
 </script>
 <script>
