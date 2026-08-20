@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="format-detection" content="telephone=no">
-<title>精密度评估工具</title>
+<title>精密度计算</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; background: #f5f7fa; color: #333; line-height: 1.6; -webkit-font-smoothing: antialiased; }
@@ -82,14 +82,21 @@ select:focus, input[type="text"]:focus { outline: none; border-color: #3498db; }
 </style>
 </head>
 <body>
-<div class="block-screen" id="blockScreen"><div class="icon">📵</div><h2>请在微信中打开</h2><p>本工具仅限微信公众号内使用，请通过微信访问。</p></div>
-<div class="auth-overlay" id="authOverlay">
+    <!-- 微信环境拦截 -->
+    <div class="block-screen show" id="blockScreen">
+        <div class="icon">📵</div>
+        <h2>请在微信中打开</h2>
+        <p>本工具仅限微信公众号内使用，请通过微信访问。</p>
+    </div>
+
+    <!-- 密码验证层 -->
+    <div class="auth-overlay hidden" id="authOverlay">
 <div class="auth-box">
 <div class="icon">🔐</div>
 <h2>访问验证</h2>
 <p>请输入访问密码继续使用<br>（密码请查看公众号MedFileShare置顶文章）</p>
 <div class="error-msg" id="authError"></div>
-<input type="password" id="authInput" placeholder="输入密码" maxlength="12" autocomplete="off">
+<input type="password" id="authInput" placeholder="输入密码" maxlength="8" autocomplete="off">
 <button class="btn-auth" id="authBtn">进入工具</button>
 <div class="hint">仅限授权用户使用</div>
 <div class="qr-section">
@@ -101,15 +108,15 @@ select:focus, input[type="text"]:focus { outline: none; border-color: #3498db; }
 </div>
 <div class="container" id="mainContainer">
 <div class="header">
-<h1>精密度评估</h1>
-<div class="subtitle" id="confLevelTitle">95%置信上限</div>
+<h1>精密度计算</h1>
+<div class="subtitle" id="confLevelTitle"></div>
 </div>
 <div class="card">
 <div class="card-title">数据输入</div>
 <div class="tips"><strong>提示：</strong>数值可用逗号、空格或换行分隔</div>
 <div class="form-group">
 <label>测定数据</label>
-<textarea id="dataInput" placeholder="请输入测定数据"></textarea>
+<textarea id="dataInput" placeholder=""></textarea>
 <div class="data-count" id="dataCount">已输入 0 个数据</div>
 </div>
 </div>
@@ -126,7 +133,7 @@ select:focus, input[type="text"]:focus { outline: none; border-color: #3498db; }
 </div>
 <div class="form-group">
 <label>RSD 限度 (%)</label>
-<input type="text" id="limitInput" placeholder="请输入RSD限度，">
+<input type="text" id="limitInput" placeholder="">
 </div>
 </div>
 <div class="btn-group">
@@ -154,7 +161,7 @@ select:focus, input[type="text"]:focus { outline: none; border-color: #3498db; }
 <div class="report-content" style="position: relative;">
 <button class="modal-close" id="modalClose">&times;</button>
 <div class="report-header">
-<h3>精密度评估报告</h3>
+<h3>精密度计算结果</h3>
 <div style="font-size: 13px; color: #7f8c8d; margin-top: 4px;" id="reportConfLevel">95%置信上限</div>
 </div>
 <div style="margin-bottom: 12px;">
@@ -184,50 +191,80 @@ select:focus, input[type="text"]:focus { outline: none; border-color: #3498db; }
 <script>
 // ==================== 安全验证模块 ====================
 (function() {
+    // 1. 检测微信环境
     const isWechat = /MicroMessenger/i.test(navigator.userAgent);
     if (!isWechat) {
-        document.getElementById("blockScreen").classList.add("show");
-        document.getElementById("authOverlay").classList.add("hidden");
         return;
     }
-    const CORRECT_PWD = String.fromCharCode(50,48,50,52); // ""
-    const STORAGE_KEY = "_prec_tool_auth";
-    const EXPIRE_HOURS = 24;
+    // 微信环境：隐藏拦截页，显示密码验证页
+    document.getElementById('blockScreen').classList.remove('show');
+    document.getElementById('authOverlay').classList.remove('hidden');
+
+    // 2. 密码验证（简单混淆，可定期更换）
+    // 密码: （实际使用时请修改）
+    const CORRECT_PWD = String.fromCharCode(97,112,108,51,57,48,55); // ""
+    const STORAGE_KEY = '_acc_tool_auth';
+    const EXPIRE_HOURS = 12; // 验证有效期12小时
+
+    // 检查是否已验证
     function checkAuth() {
         const record = localStorage.getItem(STORAGE_KEY);
         if (!record) return false;
         try {
             const data = JSON.parse(atob(record));
             if (data.p !== btoa(CORRECT_PWD)) return false;
-            if (Date.now() - data.t > EXPIRE_HOURS * 3600 * 1000) return false;
+            const now = Date.now();
+            if (now - data.t > EXPIRE_HOURS * 3600 * 1000) return false;
             return true;
-        } catch(e) { return false; }
+        } catch(e) {
+            return false;
+        }
     }
+
+    // 保存验证状态
     function saveAuth() {
         const data = { p: btoa(CORRECT_PWD), t: Date.now() };
         localStorage.setItem(STORAGE_KEY, btoa(JSON.stringify(data)));
     }
+
+    // 已验证则直接显示
     if (checkAuth()) {
-        document.getElementById("authOverlay").classList.add("hidden");
-        document.getElementById("mainContainer").classList.add("show");
+        document.getElementById('authOverlay').classList.add('hidden');
+        document.getElementById('mainContainer').classList.add('show');
         return;
     }
-    document.getElementById("authBtn").addEventListener("click", function() {
-        const input = document.getElementById("authInput").value.trim();
-        const errorEl = document.getElementById("authError");
+
+    // 验证按钮
+    document.getElementById('authBtn').addEventListener('click', function() {
+        const input = document.getElementById('authInput').value.trim();
+        const errorEl = document.getElementById('authError');
         if (input === CORRECT_PWD) {
             saveAuth();
-            document.getElementById("authOverlay").classList.add("hidden");
-            document.getElementById("mainContainer").classList.add("show");
+            document.getElementById('authOverlay').classList.add('hidden');
+            document.getElementById('mainContainer').classList.add('show');
         } else {
-            errorEl.textContent = "密码错误，请重新输入";
-            document.getElementById("authInput").value = "";
-            document.getElementById("authInput").focus();
+            errorEl.textContent = '密码错误，请重新输入';
+            document.getElementById('authInput').value = '';
+            document.getElementById('authInput').focus();
         }
     });
-    document.getElementById("authInput").addEventListener("keypress", function(e) {
-        if (e.key === "Enter") document.getElementById("authBtn").click();
+
+    // 回车提交
+    document.getElementById('authInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') document.getElementById('authBtn').click();
     });
+
+    // 3. 简单反调试：检测开发者工具（可选，会误伤但增加难度）
+    (function() {
+        const threshold = 160;
+        const check = function() {
+            if (window.outerHeight - window.innerHeight > threshold ||
+                window.outerWidth - window.innerWidth > threshold) {
+                // 可能打开了开发者工具，不做强制处理，仅增加干扰
+            }
+        };
+        setInterval(check, 1000);
+    })();
 })();
 
 // ==================== 计算核心模块 ====================
