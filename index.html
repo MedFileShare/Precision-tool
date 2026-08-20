@@ -83,14 +83,14 @@ select:focus, input[type="text"]:focus { outline: none; border-color: #3498db; }
 </head>
 <body>
     <!-- 微信环境拦截 -->
-    <div class="block-screen show" id="blockScreen">
+    <div class="block-screen" id="blockScreen">
         <div class="icon">📵</div>
         <h2>请在微信中打开</h2>
         <p>本工具仅限微信公众号内使用，请通过微信访问。</p>
     </div>
 
     <!-- 密码验证层 -->
-    <div class="auth-overlay hidden" id="authOverlay">
+    <div class="auth-overlay" id="authOverlay">
 <div class="auth-box">
 <div class="icon">🔐</div>
 <h2>访问验证</h2>
@@ -194,11 +194,10 @@ select:focus, input[type="text"]:focus { outline: none; border-color: #3498db; }
     // 1. 检测微信环境
     const isWechat = /MicroMessenger/i.test(navigator.userAgent);
     if (!isWechat) {
+        document.getElementById('blockScreen').classList.add('show');
+        document.getElementById('authOverlay').classList.add('hidden');
         return;
     }
-    // 微信环境：隐藏拦截页，显示密码验证页
-    document.getElementById('blockScreen').classList.remove('show');
-    document.getElementById('authOverlay').classList.remove('hidden');
 
     // 2. 密码验证（简单混淆，可定期更换）
     // 密码: （实际使用时请修改）
