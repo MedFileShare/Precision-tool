@@ -25,7 +25,7 @@ select:focus, input[type="text"]:focus { outline: none; border-color: #3498db; }
 .btn-group { display: flex; gap: 10px; margin-top: 16px; }
 .btn { flex: 1; padding: 14px 0; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; text-align: center; transition: all 0.2s; }
 .btn:active { transform: scale(0.98); opacity: 0.9; }
-.btn-primary { background: #16a34a; color: white; }
+.btn-primary { background: #3498db; color: white; }
 .btn-secondary { background: #95a5a6; color: white; }
 .btn-info { background: #3498db; color: white; }
 .result-box { display: none; }
@@ -112,10 +112,8 @@ select:focus, input[type="text"]:focus { outline: none; border-color: #3498db; }
 <div class="subtitle" id="confLevelTitle"></div>
 </div>
 <div class="card">
-<div class="card-title">数据输入</div>
-<div class="tips"><strong>提示：</strong>数值可用逗号、空格或换行分隔</div>
+<div class="card-title">数据输入<span style="font-size:13px;font-weight:normal;color:#7f8c8d;margin-left:8px;">（数值可用逗号、空格或换行分隔）</span></div>
 <div class="form-group">
-<label>测定数据</label>
 <textarea id="dataInput" placeholder=""></textarea>
 <div class="data-count" id="dataCount">已输入 0 个数据</div>
 </div>
