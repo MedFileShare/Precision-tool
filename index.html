@@ -476,7 +476,7 @@ function displayResults() {
         <div class="result-item"><div class="label">平均值 Mean</div><div class="value">${r.mean.toFixed(4)}</div></div>
         <div class="result-item"><div class="label">样本标准差 SD</div><div class="value">${r.sd.toFixed(6)}</div></div>
         <div class="result-item"><div class="label">RSD %</div><div class="value">${r.rsd.toFixed(4)} %</div></div>
-        <div class="result-item full-width"><div class="label">RSD单侧 ${r.confidenceLevel}%置信上限</div><div class="value">${r.ciUpperRsd.toFixed(4)} %</div></div>
+        <div class="result-item full-width"><div class="label"> ${r.confidenceLevel}%置信上限</div><div class="value">${r.ciUpperRsd.toFixed(4)} %</div></div>
         <div class="result-item full-width"><div class="label">RSD 限度</div><div class="value">${r.limit !== null ? r.limit.toFixed(2) + " %" : "-"}</div></div>`;
     const judgmentArea = document.getElementById("judgmentArea");
     if (r.limit !== null) {
