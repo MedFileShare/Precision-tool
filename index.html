@@ -480,7 +480,7 @@ function displayResults() {
         <div class="result-item full-width"><div class="label">RSD 限度</div><div class="value">${r.limit !== null ? r.limit.toFixed(2) + " %" : "-"}</div></div>`;
     const judgmentArea = document.getElementById("judgmentArea");
     if (r.limit !== null) {
-        judgmentArea.innerHTML = `<div class="judgment ${isPass ? "pass" : "fail"}"><div>${isPass ? "✅ 合格" : "❌ 不合格"}</div><div class="judgment-detail">RSD ${r.confidenceLevel}%置信上限 (${r.ciUpperRsd.toFixed(4)}%) ${isPass ? "≤" : ">"} 限度范围 (${r.limit.toFixed(2)}%)</div></div>`;
+        judgmentArea.innerHTML = `<div class="judgment ${isPass ? "pass" : "fail"}"><div>${isPass ? "✅ 合格" : "❌ 不合格"}</div><div class="judgment-detail">RSD单侧 ${r.confidenceLevel}%置信上限 (${r.ciUpperRsd.toFixed(4)}%) ${isPass ? "≤" : ">"} 限度范围 (${r.limit.toFixed(2)}%)</div></div>`;
     } else { judgmentArea.innerHTML = ""; }
     document.getElementById("resultBox").classList.add("show");
 }
@@ -499,7 +499,7 @@ function generateReport() {
     document.getElementById("reportCiUpper").textContent = r.ciUpperRsd.toFixed(4) + " %";
     const reportJudgment = document.getElementById("reportJudgment");
     if (r.limit !== null) {
-        reportJudgment.innerHTML = `<div class="judgment ${isPass ? "pass" : "fail"}"><div style="font-size:18px">${isPass ? "合格" : "不合格"}</div><div class="judgment-detail">RSD ${r.confidenceLevel}%置信上限 (${r.ciUpperRsd.toFixed(4)}%) ${isPass ? "≤" : ">"} 限度范围 (${r.limit.toFixed(2)}%)</div></div>`;
+        reportJudgment.innerHTML = `<div class="judgment ${isPass ? "pass" : "fail"}"><div style="font-size:18px">${isPass ? "合格" : "不合格"}</div><div class="judgment-detail">RSD 单侧${r.confidenceLevel}%置信上限 (${r.ciUpperRsd.toFixed(4)}%) ${isPass ? "≤" : ">"} 限度范围 (${r.limit.toFixed(2)}%)</div></div>`;
     } else { reportJudgment.innerHTML = ""; }
     document.getElementById("reportModal").classList.add("show");
     document.body.style.overflow = "hidden";
@@ -515,7 +515,7 @@ function copyResults() {
     const r = currentResults;
     const isPass = r.limit !== null && r.ciUpperRsd <= r.limit;
     const text =
-        "精密度评估报告（" + r.confidenceLevel + "%置信上限）\n" +
+        "精密度评估报告（" RSD单侧+ r.confidenceLevel + "%置信上限）\n" +
         "━━━━━━━━━━━━━━\n" +
         "测定数据：" + r.data.join(", ") + "\n" +
         "RSD 限度：" + (r.limit !== null ? r.limit.toFixed(2) + "%" : "-") + "\n" +
@@ -572,7 +572,7 @@ document.getElementById("dataInput").addEventListener("input", updateDataCount);
 document.getElementById("confidenceLevel").addEventListener("change", (e) => {
     const confText = e.target.options[e.target.selectedIndex].text;
     document.getElementById("confLevelTitle").textContent = confText + "置信上限";
-    document.title = "精密度评估（" + confText + "置信上限）";
+    document.title = "精密度评估（RSD单侧" + confText + "置信上限）";
 });
 document.getElementById("reportModal").addEventListener("click", (e) => {
     if (e.target.id === "reportModal") closeReport();
