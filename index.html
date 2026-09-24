@@ -476,7 +476,7 @@ function displayResults() {
         <div class="result-item"><div class="label">平均值 Mean</div><div class="value">${r.mean.toFixed(4)}</div></div>
         <div class="result-item"><div class="label">样本标准差 SD</div><div class="value">${r.sd.toFixed(6)}</div></div>
         <div class="result-item"><div class="label">RSD %</div><div class="value">${r.rsd.toFixed(4)} %</div></div>
-        <div class="result-item full-width"><div class="label"> ${r.confidenceLevel}%置信上限</div><div class="value">${r.ciUpperRsd.toFixed(4)} %</div></div>
+        <div class="result-item full-width"><div class="label"> ${r.confidenceLevel}%置信上限（RSD单侧）</div><div class="value">${r.ciUpperRsd.toFixed(4)} %</div></div>
         <div class="result-item full-width"><div class="label">RSD 限度</div><div class="value">${r.limit !== null ? r.limit.toFixed(2) + " %" : "-"}</div></div>`;
     const judgmentArea = document.getElementById("judgmentArea");
     if (r.limit !== null) {
@@ -489,7 +489,7 @@ function generateReport() {
     if (!currentResults) return;
     const r = currentResults;
     const isPass = r.limit !== null && r.ciUpperRsd <= r.limit;
-    document.getElementById("reportConfLevel").textContent = r.confidenceLevel + "%置信上限";
+    document.getElementById("reportConfLevel").textContent = r.confidenceLevel + "%置信上限（RSD单侧）";
     document.getElementById("reportData").textContent = r.data.join(", ");
     document.getElementById("reportLimit").textContent = r.limit !== null ? r.limit.toFixed(2) + " %" : "-";
     document.getElementById("reportN").textContent = r.n;
@@ -571,7 +571,7 @@ document.getElementById("copyReportBtn").addEventListener("click", copyReport);
 document.getElementById("dataInput").addEventListener("input", updateDataCount);
 document.getElementById("confidenceLevel").addEventListener("change", (e) => {
     const confText = e.target.options[e.target.selectedIndex].text;
-    document.getElementById("confLevelTitle").textContent = confText + "置信上限";
+    document.getElementById("confLevelTitle").textContent = confText + "置信上限（RSD单侧）";
     document.title = "精密度评估（" + confText + "置信上限（RSD单侧））";
 });
 document.getElementById("reportModal").addEventListener("click", (e) => {
