@@ -515,7 +515,7 @@ function copyResults() {
     const r = currentResults;
     const isPass = r.limit !== null && r.ciUpperRsd <= r.limit;
     const text =
-        "精密度评估报告（" RSD单侧+ r.confidenceLevel + "%置信上限）\n" +
+        "精密度评估报告（"+ r.confidenceLevel + "%置信上限（RSD单侧）\n" +
         "━━━━━━━━━━━━━━\n" +
         "测定数据：" + r.data.join(", ") + "\n" +
         "RSD 限度：" + (r.limit !== null ? r.limit.toFixed(2) + "%" : "-") + "\n" +
@@ -572,7 +572,7 @@ document.getElementById("dataInput").addEventListener("input", updateDataCount);
 document.getElementById("confidenceLevel").addEventListener("change", (e) => {
     const confText = e.target.options[e.target.selectedIndex].text;
     document.getElementById("confLevelTitle").textContent = confText + "置信上限";
-    document.title = "精密度评估（RSD单侧" + confText + "置信上限）";
+    document.title = "精密度评估（" + confText + "置信上限（RSD单侧））";
 });
 document.getElementById("reportModal").addEventListener("click", (e) => {
     if (e.target.id === "reportModal") closeReport();
