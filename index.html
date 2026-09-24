@@ -121,7 +121,7 @@ select:focus, input[type="text"]:focus { outline: none; border-color: #3498db; }
 <div class="card">
 <div class="card-title">参数设置</div>
 <div class="form-group">
-<label>置信水平</label>
+<label>置信水平（RSD单侧）</label>
 <select id="confidenceLevel">
 <option value="90">90%</option>
 <option value="95" selected>95%</option>
@@ -176,7 +176,7 @@ select:focus, input[type="text"]:focus { outline: none; border-color: #3498db; }
 <tr><td>平均值 (Mean)</td><td id="reportMean">-</td></tr>
 <tr><td>样本标准差 (SD)</td><td id="reportSd">-</td></tr>
 <tr><td>相对标准偏差 (RSD %)</td><td id="reportRsd">-</td></tr>
-<tr><td>RSD 置信上限 (%)</td><td id="reportCiUpper" style="font-weight: 600;">-</td></tr>
+<tr><td>RSD单侧 置信上限 (%)</td><td id="reportCiUpper" style="font-weight: 600;">-</td></tr>
 </table>
 <div id="reportJudgment"></div>
 <div class="modal-actions">
@@ -476,7 +476,7 @@ function displayResults() {
         <div class="result-item"><div class="label">平均值 Mean</div><div class="value">${r.mean.toFixed(4)}</div></div>
         <div class="result-item"><div class="label">样本标准差 SD</div><div class="value">${r.sd.toFixed(6)}</div></div>
         <div class="result-item"><div class="label">RSD %</div><div class="value">${r.rsd.toFixed(4)} %</div></div>
-        <div class="result-item full-width"><div class="label">RSD ${r.confidenceLevel}%置信上限</div><div class="value">${r.ciUpperRsd.toFixed(4)} %</div></div>
+        <div class="result-item full-width"><div class="label">RSD单侧 ${r.confidenceLevel}%置信上限</div><div class="value">${r.ciUpperRsd.toFixed(4)} %</div></div>
         <div class="result-item full-width"><div class="label">RSD 限度</div><div class="value">${r.limit !== null ? r.limit.toFixed(2) + " %" : "-"}</div></div>`;
     const judgmentArea = document.getElementById("judgmentArea");
     if (r.limit !== null) {
@@ -524,11 +524,11 @@ function copyResults() {
         "平均值 Mean：" + r.mean.toFixed(4) + "\n" +
         "样本标准差 SD：" + r.sd.toFixed(6) + "\n" +
         "RSD %：" + r.rsd.toFixed(4) + " %\n" +
-        "RSD " + r.confidenceLevel + "%置信上限：" + r.ciUpperRsd.toFixed(4) + " %\n" +
+        "RSD单侧 " + r.confidenceLevel + "%置信上限：" + r.ciUpperRsd.toFixed(4) + " %\n" +
         "━━━━━━━━━━━━━━\n" +
         "判定结果：" + (r.limit !== null ? (isPass ? "✅ 合格" : "❌ 不合格") : "未设定限度") +
         (r.limit !== null
-            ? "\nRSD " + r.confidenceLevel + "%置信上限 (" + r.ciUpperRsd.toFixed(4) + "%) " + (isPass ? "≤" : ">") + " 限度范围 (" + r.limit.toFixed(2) + "%)"
+            ? "\nRSD单侧 " + r.confidenceLevel + "%置信上限 (" + r.ciUpperRsd.toFixed(4) + "%) " + (isPass ? "≤" : ">") + " 限度范围 (" + r.limit.toFixed(2) + "%)"
             : "");
     copyToClipboard(text);
 }
